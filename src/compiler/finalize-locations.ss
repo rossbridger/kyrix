@@ -1,0 +1,21 @@
+(library (compiler finalize-locations)
+  (export finalize-locations)
+  (import (chezscheme)
+	  (nanopass)
+	  (compiler helpers)
+	  (compiler ir))
+
+  (define-pass finalize-locations : L23 (x) -> L24 ()
+    (uvar : uvar (x env) -> Location ()
+	  (cond
+	   [(assq x env) => cdr]
+	   [else (error who "location of ~a not found" x)]))
+    (Tail : Tail (x env) -> Tail ())
+    (Triv : Triv (x env) -> Triv ())
+    (Variable : Variable (x env) -> Location ())
+    (Rhs : Rhs (x env) -> Rhs ())
+    (Pred : Pred (x env) -> Pred ())
+    (Effect : Effect (x env) -> Effect ())
+    (Body : Body (x) -> Tail ()
+	  [(locate ([,x* ,loc*] ...) ,tbody)
+	   (Tail tbody (map cons x* loc*))])))

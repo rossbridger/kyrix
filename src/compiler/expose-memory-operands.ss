@@ -1,0 +1,15 @@
+(library (compiler expose-memory-operands)
+  (export expose-memory-operands)
+  (import (chezscheme)
+	  (nanopass)
+	  (compiler helpers)
+	  (compiler ir))
+
+  (define-pass expose-memory-operands : L25 (x) -> L26 ()
+    (definitions)
+    (Effect : Effect (x) -> Effect ()
+	    [(mset! ,triv1 ,triv2 ,triv3) ;; a8 new
+             `(set! (disp ,triv1 ,triv2) ,triv3)])
+    (Rhs : Rhs (x) -> Rhs ()
+	 [(mref ,triv1 ,triv2)
+	  `(disp ,triv1 ,triv2)])))

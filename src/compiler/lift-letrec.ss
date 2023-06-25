@@ -1,0 +1,23 @@
+(library (compiler lift-letrec)
+  (export lift-letrec)
+  (import (chezscheme)
+	  (nanopass)
+	  (compiler helpers)
+	  (compiler ir))
+
+  (define-pass lift-letrec : L9 (x) -> L10 ()
+    (definitions
+      (define global-label* '())
+      (define global-lambda* '())
+      (define (append-letrec! l* le*)
+	(set! global-label* (append l* global-label*))
+	(set! global-lambda* (append le* global-lambda*))))
+    (Program : Program (x) -> Program ()
+	     [,e
+	      (let ([e (Expr e)])
+		`(letrec ([,global-label* ,global-lambda*] ...) ,e))])
+    (Expr : Expr (x) -> Expr ()
+	  [(letrec ([,l* ,[le*]] ...) ,[body])
+	   (append-letrec! l* le*)
+	   body]))
+  )

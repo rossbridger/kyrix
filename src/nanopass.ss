@@ -7,7 +7,6 @@
     nanopass-case language->s-expression extends entry terminals
     nongenerative-id maybe #;define-nanopass-record-types diff-languages
     define-language-node-counter prune-language define-pruned-language
-    with-extended-quasiquote with-r6rs-quasiquote pass-input-parser
     pass-output-unparser pass-identifier? pass-input-language
     pass-output-language)
   (import
