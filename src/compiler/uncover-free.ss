@@ -3,20 +3,12 @@
   (import (chezscheme)
 	  (nanopass)
 	  (compiler helpers)
-	  (sanitize-binding-forms))
-
-  (define-language L7
-    (extends L6)
-    (FreeBody (fbody)
-	      (+ (free (x* ...) body)))
-    (LambdaExpr (le)
-		(- (lambda (fml* ...) body))
-		(+ (lambda (fml* ...) fbody))))
+	  (compiler ir))
 
   ;; Interestingly, this pass is right in the nanopass user guide.
   ;; But I haven't found a documentation on this pass, so I will
   ;; just copy this pass verbatim.
-  (define-pass uncover-free : L6 (x) -> L7 ()
+  (define-pass uncover-free : L6a (x) -> L7a ()
     (Expr : Expr (x) -> Expr ('())
 	  [(quote ,c) (values `(quote ,c) '())]
 	  [,x (values x (list x))]
@@ -33,7 +25,9 @@
 	  [(,pr ,[e* free**]...)
 	   (values `(,pr ,e* ...) (apply union free**))]
 	  [(,[e free*] ,[e* free**] ...)
-	   (values `(,e ,e* ...) (apply union free* free**))])
+	   (values `(,e ,e* ...) (apply union free* free**))]
+	  [(set! ,x ,[e free*])
+	   (values `(set! ,x ,e) (set-cons x free*))])
     (LambdaExpr : LambdaExpr (x) -> LambdaExpr (free*)
 		[(lambda (,x* ...) ,[body free*])
 		 (let ([free* (difference free* x*)])

@@ -5,7 +5,19 @@
 	  (compiler helpers)
 	  (compiler ir))
 
-  (define-pass specify-representation : L11 (x) -> L12 ()
+  (define-pass %mark-tail-position : L12a (x) -> L12a ()
+    (Tail : Value (x) -> Tail ()
+	  [,triv triv]
+	  [(mref ,v1 ,v2) `(mref ,v1 ,v2)]
+	  [(call ,v ,v* ...) `(call ,v ,v* ...)]
+	  [(,binop ,v1 ,v2) `(,binop ,v1 ,v2)]
+	  [(alloc ,v) `(alloc ,v)]
+	  [(if ,p0 ,[t1] ,[t2]) `(if ,p0 ,t1 ,t2)]
+	  [(begin ,e* ... ,[tbody]) `(begin ,e* ... ,tbody)]
+	  [(let ([,x* ,v*] ...) ,[tbody]) `(let ([,x* ,v*] ...) ,tbody)])
+    (Tail x))
+  
+  (define-pass specify-representation : L11a (x) -> L12a ()
     (definitions
       (define sra (lambda (x n) (ash x (- n))))
       ;; definition for the binary rep of constants.
@@ -128,52 +140,7 @@
 		  (convert-value-prims val-pr v*)
 		  (error who "~a: arity mismatch: expected ~a, got ~a" val-pr arity v*)))])
     (LambdaExpr : LambdaExpr (x) -> LambdaExpr ()
-		[(lambda (,x* ...) ,[tbody]) `(lambda (,x* ...) ,tbody)])
+		[(lambda (,x* ...) ,[vbody]) `(lambda (,x* ...) ,(%mark-tail-position vbody))])
     (Program : Program (x) -> Program ()
-	     [(letrec ([,l* ,[le*]] ...) ,[tbody]) `(letrec ([,l* ,le*] ...) ,tbody)])
-
-;;; TODO: An possible optimization is to translate to value first then
-;;; implement a seperate pass to "mark" the last Value statement as
-;;; Tail. I will probably come back and do just that.
-    (Tail : Value (x) -> Tail ()
-	  (definitions
-	    (define (convert-tail-prims pr v*)
-	      (case pr
-		[(void) $void]
-		[(+ -) `(,pr ,(car v*) ,(cadr v*))]
-		[(*) (let ([a (car v*)]
-			   [b (cadr v*)])
-		       (cond
-			[(integer? a) `(* ,b ,(sra a 3))]
-			[(integer? b) `(* ,a ,(sra b 3))]
-			[else `(* ,a (sra ,b 3))]))]
-		[(cons) (let ([first (unique-name 't)] [last (unique-name 't)] [pair (unique-name 't)])
-			  `(let ([,first ,(car v*)] [,last ,(cadr v*)])
-			     (let ([,pair (+ (alloc ,size-pair) ,tag-pair)])
-			       (begin
-				 (mset! ,pair ,(- disp-car tag-pair) ,first)
-				 (mset! ,pair ,(- disp-cdr tag-pair) ,last)
-				 ,pair))))]
-		[(car) `(mref ,(car v*) ,(- disp-car tag-pair))]
-		[(cdr) `(mref ,(car v*) ,(- disp-cdr tag-pair))]
-		[(make-vector) (let ([size-var (unique-name 't)] [size (car v*)])
-				 `(let ([,size-var (+ (alloc ,(if (integer? size) (+ disp-vector-data size) `(+ ,disp-vector-data ,size))) ,tag-vector)])
-				    (begin
-				      (mset! ,size-var ,(- disp-vector-length tag-vector) ,size)
-				      ,size-var)))]
-		[(vector-length) `(mref ,(car v*) ,(- disp-vector-length tag-vector))]
-		[(vector-ref) (let ([value (cadr v*)])
-				(if (integer? value) 
-				    `(mref ,(car v*) ,(+ (- disp-vector-data tag-vector) value))
-				    `(mref ,(car v*) (+ ,(- disp-vector-data tag-vector) ,value))))]
-		[else (error who "Unknown value prim ~a" pr)])))
-	  [(if ,[p0] ,[t1] ,[t2]) `(if ,p0 ,t1 ,t2)]
-	  [(begin ,[e*] ... ,[t]) `(begin ,e* ... ,[t])]
-	  [(let ([,x* ,[v*]] ...) ,[tbody]) `(let ([,x* ,v*] ...) ,[tbody])]
-	  [(quote ,c) (convert-constant c)]
-	  [(,val-pr ,[v*] ...)
-	   (let ([arity (cdr (assq val-pr value-prims))])
-	     (if (eq? (length v*) arity)
-		 (convert-tail-prims val-pr v*)
-		 (error who "~a: arity mismatch: expected ~a, got ~a" val-pr arity v*)))]))
-  )
+	     [(letrec ([,l* ,[le*]] ...) ,[vbody]) `(letrec ([,l* ,le*] ...) ,(%mark-tail-position vbody))]))
+)

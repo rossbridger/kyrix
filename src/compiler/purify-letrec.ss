@@ -61,8 +61,8 @@
 							   [(begin ,e0* ... ,e0)
 							    (loop (append e0* (cons e0 (cdr e*))) re*)]
 							   [else (loop (cdr e*) (cons (car e*) re*))])))))]))))
-	  [(letrec ([,uv* ,[e*]] ...) (assigned (,uv0* ...) ,[body]))
-	   (let-values ([(es* el* ec* xs* xl* xc*) (classify uv* e* uv0*)])
+	  [(letrec ([,x* ,[e*]] ...) (assigned (,uv* ...) ,[body]))
+	   (let-values ([(es* el* ec* xs* xl* xc*) (classify x* e* uv*)])
 	     (build-let xs* es*
 			(build-let xc* (map (lambda (x) `(void)) xc*)
 				   (build-begin

@@ -5,7 +5,9 @@
 	  L14 unparse-L14 L15 unparse-L15 L16 unparse-L16 L17 unparse-L17 L18
 	  unparse-L18 L19 unparse-L19 L20 unparse-L20 L21 unparse-L21 L22 unparse-L22
 	  L23 unparse-L23 L24 unparse-L24 L25 unparse-L25 L26 unparse-L26 L27
-	  unparse-L27 L28 unparse-L28 L5a unparse-L5a)
+	  unparse-L27 L28 unparse-L28 L5a unparse-L5a L6a unparse-L6a L7a unparse-L7a
+	  L8a unparse-L8a L9a unparse-L9a L10a unparse-L10a L11a unparse-L11a L12a
+	  unparse-L12a L13a unparse-L13a)
 
   (import (chezscheme)
 	  (nanopass)
@@ -117,6 +119,14 @@
 	  (- (set! x e)
 	     (let ([x* e*] ...) abody))
 	  (+ (let ([x* e*] ...) body))))
+
+  ;; sanitize-binding-forms
+  (define-language L6a
+    (extends L5a)
+    (Expr (e body)
+	  (- le
+	     (letrec ([x* e*] ...) body))
+	  (+ (letrec ([x* le*] ...) body))))
   
   (define-language L6
     (extends L5)
@@ -124,7 +134,16 @@
 	  (- le
 	     (letrec ([x* e*] ...) body))
 	  (+ (letrec ([x* le*] ...) body))))
-  
+
+  ;; uncover-free
+  (define-language L7a
+    (extends L6a)
+    (FreeBody (fbody)
+	      (+ (free (x* ...) body)))
+    (LambdaExpr (le)
+		(- (lambda (fml* ...) body))
+		(+ (lambda (fml* ...) fbody))))
+    
   (define-language L7
     (extends L6)
     (FreeBody (fbody)
@@ -133,6 +152,25 @@
 		(- (lambda (fml* ...) body))
 		(+ (lambda (fml* ...) fbody))))
 
+  ;; convert-closures
+  (define-language L8a
+    (extends L7a)
+    (terminals
+     (- (uvar (uv x fml)))
+     (+ (uvar (x f fml))
+	(label (l))))
+    (FreeBody (fbody)
+	      (- (free (x* ...) body))
+	      (+ (bind-free (x* ...) body)))
+    (ClosureBody (cbody)
+		 (+ (closures ([x* l* f** ...] ...) body)))
+    (Expr (e body)
+	  (- uv
+	     (letrec ([x* le*] ...) body))
+	  (+ x
+	     l
+	     (letrec ([l* le*] ...) cbody))))
+    
   (define-language L8
     (extends L7)
     (terminals
@@ -150,6 +188,23 @@
 	  (+ x
 	     l
 	     (letrec ([l* le*] ...) cbody))))
+
+  ;; introduce-procedure-primitives
+  (define-language L9a
+    (extends L8a)
+    (terminals
+     (- (primitive (pr)))
+     (+ (procedure+primitive (pr))))
+    (Expr (e body)
+	  (- (letrec ([l* le*] ...) cbody))
+	  (+ (letrec ([l* le*] ...) body)))
+    (LambdaExpr (le)
+		(- (lambda (fml* ...) fbody))
+		(+ (lambda (fml* ...) body)))
+    (ClosureBody (cbody)
+		 (- (closures ((x* l* f** ...) ...) body)))
+    (FreeBody (fbody)
+	      (- (bind-free (x* ...) body))))
   
   (define-language L9
     (extends L8)
@@ -166,6 +221,15 @@
 		 (- (closures ((x* l* f** ...) ...) body)))
     (FreeBody (fbody)
 	      (- (bind-free (x* ...) body))))
+
+  ;; lift-letrec
+  (define-language L10a
+    (extends L9a)
+    (Program (prog)
+	     (- e)
+	     (+ (letrec ([l* le*] ...) body)))
+    (Expr (e body)
+	  (- (letrec ([l* le*] ...) body))))
   
   (define-language L10
     (extends L9)
@@ -213,6 +277,55 @@
     (Program (prog)
 	     (letrec ([l* le*] ...) vbody)))
 
+  (define-language L11a
+    (extends L11)
+    (Effect (e ebody)
+	    (+ (set! x v))))
+
+  ;; 
+  (define-language L12a
+    (extends L11a)
+    (terminals
+     (+ (int64 (i))
+	(binary-op (binop))
+	(pred-op (relop)))
+     (- (constant (c))
+	(value-primitive (val-pr))
+	(predicate-primitive (pred-pr))
+	(effect-primitive (ef-pr))))
+    (Triv (triv)
+	  (+ x i l))
+    (Tail (tbody t)
+	  (+ triv
+	     (mref v1 v2)
+	     (call v v* ...)
+	     (binop v1 v2)
+	     (alloc v)
+	     (if p0 t1 t2)
+	     (begin e* ... tbody)
+	     (let ([x* v*] ...) tbody)))
+    (Pred (p pbody)
+	  (- (pred-pr v* ...))
+	  (+ (relop v1 v2)))
+    (Effect (e ebody)
+	    (- (ef-pr v* ...))
+	    (+ (mset! v1 v2 v3)))
+    (Value (v vbody)
+	   (- x
+	      l
+	      (quote c)
+	      (val-pr v* ...))
+	   (+ triv
+	      (mref v1 v2)
+	      (binop v1 v2)
+	      (alloc v)))
+    (LambdaExpr (le)
+		(- (lambda (x* ...) vbody))
+		(+ (lambda (x* ...) tbody)))
+    (Program (prog)
+	     (- (letrec ([l* le*] ...) vbody))
+	     (+ (letrec ([l* le*] ...) tbody))))
+  
   (define-language L12
     (extends L11)
     (terminals
@@ -259,6 +372,20 @@
   ;; uncover-locals
   (define-language L13
     (extends L12)
+    (terminals
+     (- (uvar (x)))
+     (+ (uvar (x local))))
+    (Program (prog)
+	     (- (letrec ([l* le*] ...) tbody))
+	     (+ (letrec ([l* le*] ...) body)))
+    (LambdaExpr (le)
+		(- (lambda (x* ...) tbody))
+		(+ (lambda (x* ...) body)))
+    (Body (body)
+	  (+ (locals (local* ...) tbody))))
+
+  (define-language L13a
+    (extends L12a)
     (terminals
      (- (uvar (x)))
      (+ (uvar (x local))))
@@ -550,5 +677,4 @@
               (- (lambda () tbody)))
     (Program (prog)
              (- (letrec ([l* le*] ...) tbody))
-	     (+ (code stmt* ...))))
-  )
+	     (+ (code stmt* ...)))))

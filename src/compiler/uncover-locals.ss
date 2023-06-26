@@ -5,7 +5,8 @@
 	  (compiler helpers)
 	  (compiler ir))
 
-  (define-pass collect-locals : L13 (x) -> * (local*)
+  ;; TODO: merge with remove-let
+  (define-pass collect-locals : L13a (x) -> * (local*)
     (definitions
       (define local* '()))
     (Pred : Pred (x) -> * (local*)
@@ -23,7 +24,7 @@
     (Tail x)
     local*)
 
-  (define-pass uncover-locals : L12 (x) -> L13 ()
+  (define-pass uncover-locals : L12a (x) -> L13a ()
     (LambdaExpr : LambdaExpr (x) -> LambdaExpr ()
 		[(lambda (,x* ...) ,[tbody]) `(lambda (,x* ...) (locals (,(collect-locals tbody) ...) ,tbody))])
     (Program : Program (x) -> Program ()

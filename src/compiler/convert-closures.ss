@@ -1,11 +1,11 @@
-(library (compiler  convert-closures)
+(library (compiler convert-closures)
   (export convert-closures)
   (import (chezscheme)
 	  (nanopass)
 	  (compiler helpers)
 	  (compiler ir))
   
-  (define-pass convert-closures : L7 (x) -> L8 ()
+  (define-pass convert-closures : L7a (x) -> L8a ()
     (definitions
       (define (make-cp x)
 	(unique-name 'cp)))

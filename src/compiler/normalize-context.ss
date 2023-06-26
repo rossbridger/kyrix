@@ -1,12 +1,11 @@
 (library (compiler normalize-context)
   (export normalize-context)
-
   (import (chezscheme)
 	  (nanopass)
 	  (compiler helpers)
 	  (compiler ir))
 
-  (define-pass normalize-context : L10 (x) -> L11 ()
+  (define-pass normalize-context : L10a (x) -> L11a ()
     (Value : Expr (x) -> Value ()
 	   [(let ([,x* ,[v*]] ...) ,[vbody]) `(let ([,x* ,v*] ...) ,vbody)]
 	   [(begin ,[e*] ... ,[v]) `(begin ,e* ... ,v)]
@@ -15,7 +14,8 @@
 	   [(,pr ,[v*] ...) (guard (predicate-primitive? pr))
 	    `(if (,pr ,v* ...) '#t '#f)]
 	   [(,pr ,[v*] ...) (guard (effect-primitive? pr))
-	    `(begin (,pr ,v* ...) `(void))]
+	    `(begin (,pr ,v* ...) (void))]
+	   [(set! ,x ,[v]) `(begin (set! ,x ,v) (void))]
 	   [(,[v] ,[v*] ...) `(call ,v ,v* ...)])
     (Effect : Expr (x) -> Effect ()
 	    [',c `(nop)]
@@ -26,12 +26,14 @@
 	    [(,pr ,[v*] ...) (guard (effect-primitive? pr))
 	     `(,pr ,v* ...)]
 	    [(,pr ,[v*] ...) `(nop)]
+	    [(set! ,x ,[v]) `(set! ,x ,v)]
 	    [(,[v] ,[v*] ...) `(call ,v ,v* ...)])
     (Pred : Expr (x) -> Pred ()
 	  [',c (if c `(true) `(false))]
 	  [(begin ,[e*] ... ,[p]) `(begin ,e* ... ,p)]
 	  [(let ([,x* ,[v*]] ...) ,[pbody]) `(let ([,x* ,v*] ...) ,pbody)]
 	  [,x `(if (eq? ,x '#f) (false) (true))]
+	  [(set! ,x ,[v]) `(begin (set! ,x ,v) (true))]
 	  [,l `(true)]
 	  [(,pr ,[v*] ...) (guard (predicate-primitive? pr))
 	   `(,pr ,v* ...)]

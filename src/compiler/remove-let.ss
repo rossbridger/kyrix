@@ -5,7 +5,7 @@
 	  (compiler helpers)
 	  (compiler ir))
 
-  (define-pass remove-let : L13 (x) -> L14 ()
+  (define-pass remove-let : L13a (x) -> L14 ()
     (definitions
       (define (generate-set! x* v*)
 	(with-output-language (L14 Effect)

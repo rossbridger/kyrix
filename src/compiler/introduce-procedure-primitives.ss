@@ -5,26 +5,33 @@
 	  (compiler helpers)
 	  (compiler ir))
 
-  ;; I have been too sleepy to test this code (it's 12:48 am atm), so I put it as-is.
-  (define-pass introduce-procedure-primitives : L8 (x) -> L9 ()
+  ;; I have rewritten this pass to allow for set! expr
+  (define-pass introduce-procedure-primitives : L8a (x) -> L9a ()
     (definitions
-      (define (closure-ref x cp free*)
-	(with-output-language (L9 Expr)
-			      (let loop ([i 0] [free* free*])
-				(cond
-				 [(null? free*) x]
-				 [(eq? x (car free*)) `(procedure-ref cp (quote ,i))]
-				 [else (loop (+ i 1) (cdr free*))])))))
+      (define (index x lst)
+	(let loop ([i 0] [lst lst])
+	  (cond
+	   ([null? lst] #f)
+	   ([eq? (car lst) x] i)
+	   (else (loop (+ i 1) (cdr lst)))))))
     (LambdaExpr : LambdaExpr (x) -> LambdaExpr ()
 		[(lambda (,x ,fml* ...) (bind-free (,f* ...) ,[body x f* -> body]))
 		 `(lambda (,x ,fml* ...) ,body)])
     (Expr : Expr (x [cp #f] [free* '()]) -> Expr ()
-	  [,x (closure-ref x cp free*)]
+	  [(set! ,x ,[e]) (let ([i (index x free*)])
+			    (if i ;; x is in the closure pointer
+				`(procedure-set! cp (quote ,i) ,e)
+				`(set! ,x ,e)))]
+	  [,x (let ([i (index x free*)])
+		(if i `(procedure-ref cp (quote ,i)) x))]
 	  [(,pr ,[e*] ...) `(,pr ,e* ...)]
 	  [(,l ,[e*] ...) `(,l ,e* ...)]
 	  [(,[e] ,[e*] ...) `((procedure-code ,e) ,e* ...)])
     (ClosureBody : ClosureBody (x cp free*) -> Expr ()
 		 (definitions
+		   (define (closure-ref f cp free*)
+		     (let ([i (index x free*)])
+		       (if i `(procedure-ref cp (quote ,i)) x)))
 		   (define (generate-procedure-sets x* f**)
 		     (map (lambda (x f*)
 			    (let loop ([f* f*] [i 0] [e* '()])
@@ -38,10 +45,10 @@
 					   ,(closure-ref (car f*) cp free*))
 					 e*)))))
 			  x* f**)))
-		 [(closures ([,x* ,l* ,f** ...] ...) ,body)
+		 [(closures ([,x* ,l* ,f** ...] ...) ,[body])
 		  (let ([size* (map length f**)])
 		    `(let ([,x* (make-procedure ,l* (quote size*))] ...)
 		       (begin
 			 ,(generate-procedure-sets x* f**) ...
-			 ,[body cp free*])))]))
+			 ,body)))]))
   )

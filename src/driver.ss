@@ -1,7 +1,7 @@
 (import (compiler assign-frame))
 (import (compiler assign-new-frame))
 (import (compiler assign-registers))
-(import (compiler convert-assignments))
+;; (import (compiler convert-assignments)) ;; removed this pass
 (import (compiler convert-closures))
 (import (compiler convert-complex-datum))
 (import (compiler discard-call-live))

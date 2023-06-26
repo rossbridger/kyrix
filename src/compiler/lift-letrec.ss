@@ -5,7 +5,8 @@
 	  (compiler helpers)
 	  (compiler ir))
 
-  (define-pass lift-letrec : L9 (x) -> L10 ()
+  ;; Maybe we can merge this pass with introduce-procedure-primitives
+  (define-pass lift-letrec : L9a (x) -> L10a ()
     (definitions
       (define global-label* '())
       (define global-lambda* '())

@@ -5,7 +5,7 @@
 	  (compiler helpers)
 	  (compiler ir))
 
-  (define-pass optimize-known-call : L8 (x) -> L8 ()
+  (define-pass optimize-known-call : L8a (x) -> L8a ()
     (LambdaExpr : LambdaExpr (x env) -> LambdaExpr ())
     (FreeBody : FreeBody (x env) -> FreeBody ())
     (ClosureBody : ClosureBody (x env) -> ClosureBody ()

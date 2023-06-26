@@ -5,14 +5,14 @@
 	  (compiler helpers)
 	  (compiler ir))
 
-  (define-pass sanitize-binding-forms : L5 (x) -> L6 ()
+  (define-pass sanitize-binding-forms : L5a (x) -> L6a ()
 		     (definitions
 		       (define classify
 			 (lambda (uv* e*)
 			   (let loop ([uv* uv*] [e* e*] [f* '()] [fml** '()] [body* '()] [x* '()] [rhs* '()])
 			     (if (null? uv*)
 				 (values f* fml** body* x* rhs*)
-				 (nanopass-case (L5 Expr) (car e*)
+				 (nanopass-case (L5a Expr) (car e*)
 						[(lambda (,fml* ...) ,body)
 						 (loop (cdr uv*) (cdr e*) (cons (car uv*) f*) (cons fml* fml**) (cons body body*) x* rhs*)]
 						[else
@@ -29,8 +29,8 @@
 				 (if (null? x*)
 				     body
 				     `(let ([,x* ,e*] ...) ,body)))))
-			   [(let ([,uv* ,e*] ...) ,[body])
-			    (let-values ([(f* fml** body* x* rhs*) (classify uv* e*)])
+			   [(let ([,x* ,e*] ...) ,[body])
+			    (let-values ([(f* fml** body* x* rhs*) (classify x* e*)])
 			      (build-letrec f* fml** (map Expr body*)
 					    (build-let x* (map Expr rhs*) body)))]))
 	  )

@@ -6,8 +6,8 @@
 	  (compiler helpers)
 	  (compiler ir))
 
-  (define-pass optimize-direct-call : L5 (x) -> L5 ()
+  (define-pass optimize-direct-call : L5a (x) -> L5a ()
     (Expr : Expr (x) -> Expr ()
-	  [((lambda (,uv* ...) ,[body]) ,[e*] ...)
-	   (if (eq? (length uv*) (length e*))
-	       `(let [(,uv* ,e*) ...] ,body))])))
+	  [((lambda (,x* ...) ,[body]) ,[e*] ...)
+	   (if (eq? (length x*) (length e*))
+	       `(let [(,x* ,e*) ...] ,body))])))
